@@ -1,6 +1,6 @@
 import { evalExpr, sequentialMap } from "./util.ts";
 
-export interface RequestStat {
+export interface RequestStats {
     time: number,
     status: number
 }
@@ -10,8 +10,15 @@ export interface ResponseSummary {
     status: number
 }
 
-export interface RequestStats {
-    detail: RequestStat[]
+export interface PerformRequestOutput {
+    context: ExecutionContext,
+    stats: RequestStats
+}
+
+export type ExecutionContext = Record<string, string | ResponseSummary>;
+
+export interface AllRequestStats {
+    detail: RequestStats[]
 }
 
 export interface Step {
@@ -19,7 +26,9 @@ export interface Step {
     path: string,
     method?: string,
     body?: string | Record<string | number | symbol, unknown> | Array<unknown>,
-    assign?: string
+    assign?: string,
+    waitBefore?: number,
+    waitAfter?: number
 }
 
 export interface Scenario {
@@ -29,18 +38,7 @@ export interface Scenario {
     steps: Step[]
 }
 
-const measureRequest = async (scenario: Scenario, step: Step, context: Record<string, string>, stats: RequestStats) => {
-    const t = performance.now();
-    const response = await performRequest(scenario, step, context);
-    stats.detail.push({
-        status: response.status,
-        time: performance.now() - t
-    });
-
-    return response;
-}
-
-const performRequest = async (scenario: Scenario, step: Step, context: Record<string, string | ResponseSummary>) => {
+const performRequest = async (scenario: Scenario, step: Step, context: ExecutionContext, isWarmup: boolean): Promise<RequestStats | null> => {
     const options: RequestInit = {
         method: step.method ?? 'GET'
     };
@@ -51,35 +49,89 @@ const performRequest = async (scenario: Scenario, step: Step, context: Record<st
             : JSON.stringify(step.body);
     }
 
-    const response = await fetch(new URL(await evalExpr(step.path, context), scenario.baseUrl).toString(), options);
+    if (step.waitBefore)
+        await new Promise(res => setTimeout(res, step.waitBefore));
 
-    if (step?.assign) {
-        context[step.assign] = {
-            content: response.headers.get('Content-Type')?.includes('json') ? await response.json() : await response.text(),
-            status: response.status
-        };
+    const t = performance.now();
+    let response = null;
+    let stats = null;
+    try {
+        response = await fetch(new URL(await evalExpr(step.path, context), scenario.baseUrl).toString(), options);
+    } finally {
+        if (!isWarmup) {
+            stats = {
+                status: response?.status ?? 0,
+                time: performance.now() - t
+            };
+        }
     }
 
-    return response;
+    if (step?.assign && response) {
+        try {
+            context[step.assign] = {
+                content: response.headers.get('Content-Type')?.includes('json') ? await response.json() : await response.text(),
+                status: response.status
+            };
+        } catch (e) {
+            console.error(`Error parsing response: ${e}`);
+        }
+    }
+
+    if (step.waitAfter)
+        await new Promise(res => setTimeout(res, step.waitAfter));
+
+    return stats;
 }
 
 const runAllSteps = async (scenario: Scenario, isWarmup: boolean) => {
-    const stats: RequestStats = { detail: [] };
+    const stats: RequestStats[] = [];
+    const context: ExecutionContext = Deno.env.toObject();
 
-    const context: Record<string, string> = Deno.env.toObject();
-
-    await sequentialMap<Step, Response>(
+    await sequentialMap<Step, void>(
         scenario.steps,
-        (step: Step) => {
-            return isWarmup ? performRequest(scenario, step, context) : measureRequest(scenario, step, context, stats);
+        async (step: Step) => {
+            const result = await performRequest(scenario, step, context, isWarmup);
+            if (!isWarmup && result)
+                stats.push(result);
         }
     );
+
+    return stats;
 }
+
+const codeStats = (stats: RequestStats[]) => stats.reduce((out: Record<number, number>, s) => {
+    if (!out[s.status]) out[s.status] = 0;
+    out[s.status]++;
+
+    return out;
+}, {});
+
+const codeStatsStr = (stats: RequestStats[]) => {
+    const obj: Record<string, number> = codeStats(stats);
+
+    return Object.keys(obj)
+        .map((key: string) => key.length === 3 ? ` - HTTP status ${key}: ${obj[key]} requests` : `- Network error: ${obj[key]}`)
+        .join('\n');
+}
+
+const avg = (stats: RequestStats[]) => stats.reduce((acc, s) => acc + (s.time / stats.length), 0).toFixed(0);
+const max = (stats: RequestStats[]) => stats.reduce((acc, s) => s.time > acc ? s.time : acc, 0).toFixed(0);
 
 export const runScenario = async (scenario: Scenario) => {
     for (let i = 0; i < scenario.warmup; ++i)
         await runAllSteps(scenario, true);
 
-    for (let i = 0; i < scenario.iterations; ++i)
-        await runAllSteps(scenario, false);
+    let allStats: RequestStats[] = [];
+
+    for (let i = 0; i < scenario.iterations; ++i) {
+        const stats = await runAllSteps(scenario, false);
+        console.log(`Iteration ${i + 1} - avg time: ${avg(stats)}ms, max time: ${max(stats)}ms`);
+        console.log(codeStatsStr(stats));
+        allStats = allStats.concat(stats);
+    }
+
+    console.log(`\n===== Overall stats =====\n`)
+    console.log(`Average request time: ${avg(allStats)}ms`);
+    console.log(`Max request time: ${max(allStats)}ms\n`);
+    console.log(codeStatsStr(allStats));
 }

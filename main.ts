@@ -16,4 +16,4 @@ const scenario: Scenario = {
     ...(parse(scenarioContent) as Record<string, unknown>)
 };
 
-console.log(await runScenario(scenario));
+await runScenario(scenario);
