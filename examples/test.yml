@@ -1,0 +1,17 @@
+baseUrl: "http://localhost:8000"
+iterations: 5
+warmup: 3
+steps:
+  - name: First request
+    path: "/${USER}"
+    assign: 'first_request_output'
+
+  - name: Second request
+    path: "/test"
+    method: "POST"
+    body: |
+      {
+        "user": '${USER}',
+        "length": ${USER.length},
+        "last_status": '${first_request_output.status}'
+      }
