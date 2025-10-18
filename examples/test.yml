@@ -1,17 +1,22 @@
+# You can test this scenario easily by running `npx easy-echo` in a separate shell
+
 baseUrl: "http://localhost:8000"
 iterations: 5
 warmup: 3
 steps:
-  - name: First request
+  - name: First request (uses the USER environment variable)
     path: "/${USER}"
-    assign: 'first_request_output'
+    assign: first_request_output # Saves the response to a variable
 
-  - name: Second request
+  - name: Second request (uses the first request's output as well as a few operations on variables)
     path: "/test"
     method: "POST"
     body: |
       {
-        "user": '${USER}',
-        "length": ${USER.length},
-        "last_status": '${first_request_output.status}'
+        "user": "${USER}",
+        "user_length": ${USER.length},
+        "a_random_number": ${Math.random()},
+        "last_status": "${first_request_output.status}",
+        "last_content": ${first_request_output.content},
+        "last_parsed_json_content": ${JSON.stringify(first_request_output.json)}
       }

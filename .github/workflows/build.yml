@@ -1,0 +1,30 @@
+name: Build
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      matrix:
+        os: [ubuntu]
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Install latest Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      
+      - name: Build project
+        run: |
+          deno compile -A --include evalExprWorker.js -o ./benchenario_${{ matrix.os }} ./main.ts
+
+      - name: Archive generated binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Benchenario ${{ matrix.os }} binary
+          path: ./benchenario_${{ matrix.os }}${{ matrix.os ==  'windows' && '.exe' || '' }}

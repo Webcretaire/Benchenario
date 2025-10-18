@@ -6,7 +6,8 @@ export interface RequestStats {
 }
 
 export interface ResponseSummary {
-    content: unknown,
+    content: string,
+    json?: unknown,
     status: number
 }
 
@@ -44,9 +45,10 @@ const performRequest = async (scenario: Scenario, step: Step, context: Execution
     };
 
     if (step.body) {
-        options.body = typeof step.body === 'string'
-            ? await evalExpr(step.body, context)
-            : JSON.stringify(step.body);
+        options.body = await evalExpr(
+            typeof step.body === 'string' ? step.body : JSON.stringify(step.body),
+            context
+        );
     }
 
     if (step.waitBefore)
@@ -55,6 +57,7 @@ const performRequest = async (scenario: Scenario, step: Step, context: Execution
     const t = performance.now();
     let response = null;
     let stats = null;
+
     try {
         response = await fetch(new URL(await evalExpr(step.path, context), scenario.baseUrl).toString(), options);
     } finally {
@@ -67,14 +70,20 @@ const performRequest = async (scenario: Scenario, step: Step, context: Execution
     }
 
     if (step?.assign && response) {
-        try {
-            context[step.assign] = {
-                content: response.headers.get('Content-Type')?.includes('json') ? await response.json() : await response.text(),
-                status: response.status
-            };
-        } catch (e) {
-            console.error(`Error parsing response: ${e}`);
+        const summary: ResponseSummary = {
+            content: await response.text(),
+            status: response.status
+        };
+
+        if (response.headers.get('Content-Type')?.includes('json')) {
+            try {
+                summary.json = JSON.parse(summary.content);
+            } catch (e) {
+                console.error(`Error parsing JSON response: ${e}`);
+            }
         }
+
+        context[step.assign] = summary;
     }
 
     if (step.waitAfter)
