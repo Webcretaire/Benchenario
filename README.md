@@ -6,7 +6,7 @@ This tool is used to benchmark successions of HTTP requests. Its syntax is inspi
 
 ## Installation
 
-Grab a pre-built binary from the [Release page](https://github.com/Webcretaire/Benchenario/releases), or run with Deno from source using `deno run -A main.ts [options]`
+Grab a pre-built binary from the [Release page](https://github.com/Webcretaire/Benchenario/releases), or run with [Deno](https://deno.com) from source using `deno run -A main.ts [options]`
 
 ## Usage
 
