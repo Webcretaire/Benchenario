@@ -1,3 +1,6 @@
+import { parse } from "jsr:@std/yaml@1.0.10";
+import { Scenario } from "./benchenario.ts";
+
 export const sequentialMap = async <T, U>(arr: T[], fn: (arg: T) => U | Promise<U>): Promise<U[]> => {
     const out: U[] = [];
     let p: Promise<void> = Promise.resolve();
@@ -30,3 +33,18 @@ export const evalExpr = (expression: string, context: Record<string, unknown> = 
         context
     });
 });
+
+export const parseScenario = async (scenarioContent: string): Promise<Scenario> => {
+    const scenario: Scenario = {
+        ...{
+            iterations: 1,
+            warmup: 0,
+            steps: [],
+        },
+        ...(parse(scenarioContent) as Record<string, unknown>)
+    };
+    
+    scenario.baseUrl = await evalExpr(scenario.baseUrl ?? '');
+
+    return scenario
+}

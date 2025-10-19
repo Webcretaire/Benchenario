@@ -1,11 +1,13 @@
 # You can test this scenario easily by running `npx easy-echo` in a separate shell
 
-baseUrl: "http://localhost:8000"
-iterations: 5
-warmup: 3
+baseUrl: "http://localhost:8080"
+iterations: 2
+warmup: 1
 steps:
   - name: First request (uses the USER environment variable)
     path: "/${USER}"
+    headers:
+      Accept: 'application/json'
     assign: first_request_output # Saves the response to a variable
 
   - name: Second request (uses the first request's output as well as a few operations on variables)

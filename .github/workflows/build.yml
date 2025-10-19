@@ -18,10 +18,12 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      
+
+      - name: Test project
+        run: deno test -A
+
       - name: Build project
-        run: |
-          deno compile -A --include evalExprWorker.js -o ./benchenario_${{ matrix.os }} ./main.ts
+        run: deno compile -A --include evalExprWorker.js -o ./benchenario_${{ matrix.os }} ./main.ts
 
       - name: Archive generated binary
         uses: actions/upload-artifact@v4
