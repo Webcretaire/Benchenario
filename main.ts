@@ -1,5 +1,6 @@
 import { parse } from "jsr:@std/yaml@1.0.10";
 import { runScenario, Scenario } from "./benchenario.ts";
+import { evalExpr } from "./util.ts";
 
 if (!Deno.args.length) {
     console.log('Usage : deno run main.ts <yaml specification>');
@@ -15,5 +16,7 @@ const scenario: Scenario = {
     },
     ...(parse(scenarioContent) as Record<string, unknown>)
 };
+
+scenario.baseUrl = await evalExpr(scenario.baseUrl ?? '');
 
 await runScenario(scenario);

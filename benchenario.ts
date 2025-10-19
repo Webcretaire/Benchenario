@@ -42,7 +42,7 @@ export interface Scenario {
 
 const performRequest = async (scenario: Scenario, step: Step, context: ExecutionContext, isWarmup: boolean): Promise<RequestStats | null> => {
     const options: RequestInit = {
-        method: step.method ?? 'GET'
+        method: step.method ? await evalExpr(step.method) : 'GET'
     };
 
     if (step.body) {
