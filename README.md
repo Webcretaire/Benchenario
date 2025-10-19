@@ -2,6 +2,9 @@
 
 ![logo](logo.png)
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Webcretaire_Benchenario&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Webcretaire_Benchenario)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Webcretaire_Benchenario&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Webcretaire_Benchenario)
+
 This tool is used to benchmark successions of HTTP requests. Its syntax is inspired by the unfortunately abandoned [Drill](https://github.com/fcsonline/drill) (so an [Ansible](https://github.com/ansible/ansible)-like YAML syntax)
 
 ## Installation
