@@ -26,6 +26,7 @@ export interface Step {
     name?: string,
     path: string,
     method?: string,
+    headers?: Record<string, string>,
     body?: string | Record<string | number | symbol, unknown> | Array<unknown>,
     assign?: string,
     waitBefore?: number,
@@ -49,6 +50,19 @@ const performRequest = async (scenario: Scenario, step: Step, context: Execution
             typeof step.body === 'string' ? step.body : JSON.stringify(step.body),
             context
         );
+    }
+
+    if (step.headers) {
+        const headersInit: Record<string, string> = {};
+        // Compute all header values in parallel (1 worker each)
+        await Promise.all(
+            Object.keys(step.headers).map(
+                async key => {
+                    headersInit[key] = await evalExpr(step.headers![key] ?? '', context);
+                }
+            )
+        );
+        options.headers = headersInit;
     }
 
     if (step.waitBefore)

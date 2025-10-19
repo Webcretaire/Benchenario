@@ -52,6 +52,7 @@ steps:
 - **name** - *string* : Human readable description of the step
 - **path** - *string* : Absolute or relative (according to scenario's `baseUrl`) path for the HTTP request's URL
 - **method** - *string* : HTTP method to use (default = `GET`)
+- **headers** - *Object (string keys, string values)* : List of headers to add to the request (values can use variables)
 - **body** - *string | object | array* : Optional body for the request, if an object or array is specified it will be converted to JSON
 - **assign** - *string* : Name of the variable in which the response's status and content will be saved (so you can re-use it in later requests)
 - **waitBefore** - *number* : Specify a number in milliseconds to wait before sending the request
